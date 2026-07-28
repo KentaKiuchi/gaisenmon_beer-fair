@@ -626,7 +626,14 @@
 
   /* ============================== 設定パネルの簡易ロック ============================== */
   // ここのパスワードを好きな値に変更してください
-  const SETTINGS_PASSWORD = '4629';
+  const SETTINGS_PASSWORD = '0000';
+
+  // クーポン文言などをHTMLに差し込む前に必ず通す(XSS対策)
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[ch]));
+  }
 
   function toggleSettingsPanel(panel, toggleBtn){
     const nowHidden = panel.hasAttribute('hidden');
@@ -701,8 +708,8 @@
         row.className = 'item-row';
         row.innerHTML = `
           <span class="face-num">${i + 1}</span>
-          <input type="text" value="${item.text}" data-i="${i}">
-          <input type="number" class="weight-input" min="0" max="20" value="${item.weight}" data-i="${i}" title="出やすさ">
+          <input type="text" value="${escapeHtml(item.text)}" data-i="${i}">
+          <input type="number" class="weight-input" min="0" max="20" value="${escapeHtml(item.weight)}" data-i="${i}" title="出やすさ">
         `;
         diceItemList.appendChild(row);
       });
@@ -745,7 +752,7 @@
       diceResultPanel.innerHTML = `
         <div>
           <div class="win-num">出目 <b>${faceValue}</b></div>
-          <div class="coupon ${c.win ? 'win' : 'lose'}">${c.text}</div>
+          <div class="coupon ${c.win ? 'win' : 'lose'}">${escapeHtml(c.text)}</div>
         </div>
       `;
       diceResultPanel.animate(
@@ -920,8 +927,8 @@
         const row = document.createElement('div');
         row.className = 'item-row';
         row.innerHTML = `
-          <input type="text" value="${item.label}" data-i="${i}">
-          <input type="number" class="weight-input" min="0" max="20" value="${item.weight}" data-i="${i}" title="出やすさ">
+          <input type="text" value="${escapeHtml(item.label)}" data-i="${i}">
+          <input type="number" class="weight-input" min="0" max="20" value="${escapeHtml(item.weight)}" data-i="${i}" title="出やすさ">
           <button class="remove-btn" data-i="${i}" ${items.length <= 2 ? 'disabled' : ''}>×</button>
         `;
         itemList.appendChild(row);
@@ -977,7 +984,7 @@
       rouletteResultPanel.innerHTML = `
         <div>
           <div class="label">RESULT</div>
-          <div class="value">${label}</div>
+          <div class="value">${escapeHtml(label)}</div>
         </div>
       `;
       rouletteResultPanel.animate(
