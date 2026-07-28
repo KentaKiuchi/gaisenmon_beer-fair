@@ -588,6 +588,22 @@
     </section>
   </main>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
+<script>
+  /* ============================== Firebase 初期化 ============================== */
+  const firebaseConfig = {
+    apiKey: "AIzaSyA4EhmsrNmjP9Lk_bbSZd52mk_PgfPN_sk",
+    authDomain: "gaisenmon-91d26.firebaseapp.com",
+    databaseURL: "https://gaisenmon-91d26-default-rtdb.firebaseio.com",
+    projectId: "gaisenmon-91d26",
+    storageBucket: "gaisenmon-91d26.firebasestorage.app",
+    messagingSenderId: "326228773653",
+    appId: "1:326228773653:web:fd4b1b9414c831952b371c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
 <script>
   /* ============================== モード切替 ============================== */
   const modeDiceBtn = document.getElementById('modeDiceBtn');
@@ -620,7 +636,8 @@
     const diceItemList = document.getElementById('diceItemList');
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const STORAGE_KEY = 'kaisenmon-dice-config';
+    const diceRef = db.ref('dice-roulette-config/dice');
+    let editingLock = false;
 
     function defaultDiceItems(){
       return [
@@ -632,21 +649,18 @@
         { text: "ハズレ", win: false, weight: 1 },
       ];
     }
-    function loadDiceItems(){
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw){
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length === 6) return parsed;
-        }
-      }catch(e){}
-      return defaultDiceItems();
-    }
     function saveDiceItems(){
-      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(diceItems)); }catch(e){}
+      diceRef.set(diceItems).catch(() => {});
     }
 
-    let diceItems = loadDiceItems();
+    let diceItems = defaultDiceItems();
+
+    diceRef.on('value', snap => {
+      if (editingLock || rolling) return;
+      const val = snap.val();
+      diceItems = (Array.isArray(val) && val.length === 6) ? val : defaultDiceItems();
+      renderDiceItemList();
+    });
 
     function weightedIndex(weights){
       const total = weights.reduce((a, b) => a + Math.max(0, b), 0);
@@ -672,12 +686,16 @@
         diceItemList.appendChild(row);
       });
       diceItemList.querySelectorAll('input[type=text]').forEach(inp => {
+        inp.addEventListener('focus', () => { editingLock = true; });
+        inp.addEventListener('blur', () => { editingLock = false; });
         inp.addEventListener('input', () => {
           diceItems[Number(inp.dataset.i)].text = inp.value;
           saveDiceItems();
         });
       });
       diceItemList.querySelectorAll('.weight-input').forEach(inp => {
+        inp.addEventListener('focus', () => { editingLock = true; });
+        inp.addEventListener('blur', () => { editingLock = false; });
         inp.addEventListener('input', () => {
           diceItems[Number(inp.dataset.i)].weight = Number(inp.value) || 0;
           saveDiceItems();
@@ -796,8 +814,6 @@
         roll();
       }
     });
-
-    renderDiceItemList();
   })();
 
   /* ============================== ルーレット ============================== */
@@ -814,7 +830,8 @@
     const durationVal = document.getElementById('durationVal');
 
     const PALETTE = ['#D9591C', '#E3B23C', '#4FA562', '#3F7FA6', '#B23A2E', '#A9762E'];
-    const STORAGE_KEY = 'kaisenmon-roulette-config';
+    const rouletteRef = db.ref('dice-roulette-config/roulette');
+    let editingLock = false;
 
     function defaultConfig(){
       return {
@@ -827,27 +844,24 @@
         duration: 4,
       };
     }
-    function loadConfig(){
-      try{
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw){
-          const parsed = JSON.parse(raw);
-          if (parsed && Array.isArray(parsed.items) && parsed.items.length >= 2) return parsed;
-        }
-      }catch(e){}
-      return defaultConfig();
-    }
     function saveConfig(){
-      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, duration: parseFloat(durationRange.value) })); }catch(e){}
+      rouletteRef.set({ items, duration: parseFloat(durationRange.value) }).catch(() => {});
     }
 
-    const initial = loadConfig();
-    let items = initial.items;
+    let items = defaultConfig().items;
     let currentRotation = 0;
     let spinning = false;
 
-    durationRange.value = initial.duration;
-    durationVal.textContent = `${parseFloat(initial.duration).toFixed(1)}秒`;
+    rouletteRef.on('value', snap => {
+      if (editingLock || spinning) return;
+      const val = snap.val();
+      const conf = (val && Array.isArray(val.items) && val.items.length >= 2) ? val : defaultConfig();
+      items = conf.items;
+      durationRange.value = conf.duration;
+      durationVal.textContent = `${parseFloat(conf.duration).toFixed(1)}秒`;
+      renderItemList();
+      drawWheel();
+    });
 
     function weightedIndex(weights){
       const total = weights.reduce((a, b) => a + Math.max(0, b), 0);
@@ -900,6 +914,8 @@
       });
 
       itemList.querySelectorAll('input[type=text]').forEach(inp => {
+        inp.addEventListener('focus', () => { editingLock = true; });
+        inp.addEventListener('blur', () => { editingLock = false; });
         inp.addEventListener('input', () => {
           items[Number(inp.dataset.i)].label = inp.value;
           drawWheel();
@@ -907,6 +923,8 @@
         });
       });
       itemList.querySelectorAll('.weight-input').forEach(inp => {
+        inp.addEventListener('focus', () => { editingLock = true; });
+        inp.addEventListener('blur', () => { editingLock = false; });
         inp.addEventListener('input', () => {
           items[Number(inp.dataset.i)].weight = Number(inp.value) || 0;
           saveConfig();
@@ -941,6 +959,8 @@
       }
     });
 
+    durationRange.addEventListener('focus', () => { editingLock = true; });
+    durationRange.addEventListener('blur', () => { editingLock = false; });
     durationRange.addEventListener('input', () => {
       durationVal.textContent = `${parseFloat(durationRange.value).toFixed(1)}秒`;
       saveConfig();
@@ -1002,9 +1022,6 @@
     }
 
     spinBtn.addEventListener('click', spin);
-
-    renderItemList();
-    drawWheel();
   })();
 </script>
 
