@@ -624,6 +624,27 @@
   modeDiceBtn.addEventListener('click', () => setMode('dice'));
   modeRouletteBtn.addEventListener('click', () => setMode('roulette'));
 
+  /* ============================== 設定パネルの簡易ロック ============================== */
+  // ここのパスワードを好きな値に変更してください
+  const SETTINGS_PASSWORD = '4629';
+
+  function toggleSettingsPanel(panel, toggleBtn){
+    const nowHidden = panel.hasAttribute('hidden');
+    if (nowHidden){
+      const input = prompt('設定用パスワードを入力してください');
+      if (input === null) return;
+      if (input !== SETTINGS_PASSWORD){
+        alert('パスワードが違います');
+        return;
+      }
+      panel.removeAttribute('hidden');
+      toggleBtn.textContent = '設定を閉じる';
+    } else {
+      panel.setAttribute('hidden', '');
+      toggleBtn.textContent = '設定';
+    }
+  }
+
   /* ============================== サイコロ ============================== */
   (function(){
     const cube = document.getElementById('cube');
@@ -704,14 +725,7 @@
     }
 
     diceSettingsToggle.addEventListener('click', () => {
-      const nowHidden = diceSettingsPanel.hasAttribute('hidden');
-      if (nowHidden){
-        diceSettingsPanel.removeAttribute('hidden');
-        diceSettingsToggle.textContent = '設定を閉じる';
-      } else {
-        diceSettingsPanel.setAttribute('hidden', '');
-        diceSettingsToggle.textContent = '設定';
-      }
+      toggleSettingsPanel(diceSettingsPanel, diceSettingsToggle);
     });
 
     const orientations = {
@@ -949,14 +963,7 @@
     });
 
     settingsToggle.addEventListener('click', () => {
-      const nowHidden = settingsPanel.hasAttribute('hidden');
-      if (nowHidden){
-        settingsPanel.removeAttribute('hidden');
-        settingsToggle.textContent = '設定を閉じる';
-      } else {
-        settingsPanel.setAttribute('hidden', '');
-        settingsToggle.textContent = '設定';
-      }
+      toggleSettingsPanel(settingsPanel, settingsToggle);
     });
 
     durationRange.addEventListener('focus', () => { editingLock = true; });
